@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>がんばる手話学習者～手話検定編～</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>がんばる手話学習者～手話検定編～</h1>
+    </header>
+    <main>
+        <div class="filter">
+            <label for="timer-select">タイマー (分): </label>
+            <select id="timer-select">
+                <option value="1">1分</option>
+                <option value="2">2分</option>
+                <option value="3">3分</option>
+                <option value="4">4分</option>
+                <option value="5">5分</option>
+                <option value="6">6分</option>
+                <option value="7">7分</option>
+                <option value="8">8分</option>
+                <option value="9">9分</option>
+                <option value="10">10分</option>
+            </select>
+            <button id="start-button">開始</button>
+        </div>
+        <div class="filter-container">
+            <div class="filter">
+                <label for="level">レベルを選択してください：</label>
+                <select id="level">
+                    <!-- 動的にJavaScriptでオプションを追加します -->
+                </select>
+            </div>
+            <button id="theme-button">テーマを表示</button>
+            <div id="theme"></div>
+        </div>
+        <div id="example-btn">
+            <button id="example-button">例を見る</button>
+        </div>
+        <div id="example" class="hidden"></div>
+        <div id="question-container"></div>
+        <div id="timer-container">
+            <canvas id="timer-chart"></canvas>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2024 がんばる手話学習者～手話検定編～</p>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
