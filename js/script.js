@@ -305,6 +305,7 @@ function displayQuestion() {
 
     if (filteredData.length === 0) {
         questionContent.innerText = '選択された条件に一致する問題がありません。';
+        nextQuestionButton.style.display = 'none'; // 次の問題へ進むボタンを非表示
         return;
     }
 
@@ -413,7 +414,98 @@ function displayQuestion() {
         // 「次の問題へ進む」ボタンを表示
         nextQuestionButton.style.display = 'block';
     }
-    } else if (randomQuestion.Type === '4択問題') {
+} else if (randomQuestion.Type === 'ストーリー') {
+    const storyNumber = randomQuestion["ストーリーナンバリング"];
+    const storyQuestions = getStoryQuestions(filteredData, storyNumber);
+
+    if (storyQuestions.length === 0) {
+        questionContent.innerText = 'ストーリーに該当する問題が見つかりません。';
+        return;
+    }
+
+    embedYouTubeVideo(randomQuestion.Reference);
+
+    questionContent.innerHTML = ''; // 既存のコンテンツをクリア
+
+    let answeredQuestionsCount = 0; // 回答した問題の数を追跡
+    const totalQuestions = storyQuestions.length;
+
+    // ストーリーの問題をすべて出題済みに追加
+    usedQuestions.push(...storyQuestions);
+
+    // 解説表示用のコンテナを作成（設問の最後に追加する）
+    const finalExplanationContainer = document.createElement('div');
+    finalExplanationContainer.className = 'final-explanation-container';
+    
+    // 3つのストーリー問題を表示
+    storyQuestions.forEach((storyQuestion, index) => {
+        const questionBlock = document.createElement('div');
+        questionBlock.classList.add('story-question-block');
+
+        const questionTitle = document.createElement('h3');
+        questionTitle.textContent = `${index + 1}. ${storyQuestion.Theme}`;
+        questionBlock.appendChild(questionTitle);
+
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'options-container';
+
+        storyQuestion.Option.split('\n').forEach((option, idx) => {
+            const optionWrapper = document.createElement('div');
+            const radioInput = document.createElement('input');
+            radioInput.type = 'radio';
+            radioInput.name = `options-${index}`;
+            radioInput.value = idx;
+            radioInput.id = `option${index}-${idx}`;
+
+            const radioLabel = document.createElement('label');
+            radioLabel.htmlFor = `option${index}-${idx}`;
+            radioLabel.textContent = option;
+
+            optionWrapper.appendChild(radioInput);
+            optionWrapper.appendChild(radioLabel);
+            optionsContainer.appendChild(optionWrapper);
+        });
+
+        questionBlock.appendChild(optionsContainer);
+
+        const answerButton = document.createElement('button');
+        answerButton.textContent = '回答する';
+        answerButton.className = 'answer-button';
+        questionBlock.appendChild(answerButton);
+
+        answerButton.onclick = function() {
+            const selectedOption = document.querySelector(`input[name="options-${index}"]:checked`);
+            if (!selectedOption) {
+                alert('選択肢を選んでください。');
+                return;
+            }
+
+            const selectedValue = parseInt(selectedOption.value);
+            const correctAnswer = parseInt(storyQuestion.Answer);
+
+            if (selectedValue + 1 === correctAnswer) {
+                questionBlock.appendChild(document.createElement('p')).textContent = "正解です！";
+            } else {
+                questionBlock.appendChild(document.createElement('p')).textContent = "不正解です。";
+            }
+
+            answeredQuestionsCount++;
+            answerButton.disabled = true; // ボタンを無効化
+
+            if (answeredQuestionsCount === totalQuestions) {
+                const explanation = document.createElement('p');
+                explanation.textContent = randomQuestion.Detail;
+                finalExplanationContainer.appendChild(explanation);
+
+                nextQuestionButton.style.display = 'block'; // 次の問題へ進むボタンを表示
+            }
+        };
+
+        questionContent.appendChild(questionBlock);
+    });
+
+    questionContent.appendChild(finalExplanationContainer);
+} else if (randomQuestion.Type === '4択問題') {
         // 'four-choices' の場合の処理
         questionContent.innerHTML = ''; // 以前のコンテンツをクリア
     
@@ -688,7 +780,35 @@ function embedYouTubeVideo(videoId) {
     });
 }
 
+// ストーリー問題作成用
+function getStoryQuestions(data, storyNumber) {
+    // ストーリーナンバリングが同じデータをフィルタリング
+    const storyData = data.filter(item => item["ストーリーナンバリング"] === storyNumber);
 
+    // 「#」が若い順にソート
+    storyData.sort((a, b) => parseInt(a["#"]) - parseInt(b["#"]));
+
+    // 最初の3つの問題を取得
+    const selectedQuestions = storyData.slice(0, 3);
+
+    return selectedQuestions;
+}
+
+function displayStoryVideoAndExplanation(storyNumber) {
+    const storyData = getStoryQuestions(shuwaData, storyNumber);
+    const firstQuestion = storyData[0]; // 最も若い「#」の問題を取得
+    console.log(firstQuestion);
+    // 動画を表示
+    if (firstQuestion.Reference) {
+        embedYouTubeVideo(firstQuestion.Reference); // すでにあるembedYouTubeVideo関数を使って動画を表示
+    }
+
+    // 解説を表示
+    const explanationContainer = document.createElement('div');
+    explanationContainer.innerHTML = `<p>解説: ${firstQuestion.Detail}</p>`;
+    const questionContent = document.getElementById('question-content');
+    questionContent.appendChild(explanationContainer); // 質問コンテンツの最後に解説を追加
+}
 
 
 
