@@ -85,7 +85,7 @@ function showImage(type) {
 // Excelファイルを読み込んでドロップダウンを設定する関数
 async function loadExcelData(sheetName) {
     try {
-        const response = await fetch('excel/shuwa_exam_question_list_ver0.02.xlsx'); // Excelファイルのパスを指定
+        const response = await fetch('excel/shuwa_exam_question_list_ver0.03.xlsx'); // Excelファイルのパスを指定
         const arrayBuffer = await response.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 
@@ -121,7 +121,18 @@ async function loadExcelData(sheetName) {
 function populateDropdown(elementId, data, key) {
     const selectElement = document.getElementById(elementId);
     selectElement.innerHTML = '<option value="">選択してください</option>'; // 初期化
+
+    console.log(key)
+    // 「指定しない」オプションを追加
+    if (key === 'Year') {
+        const noSelectionOption = document.createElement('option');
+        noSelectionOption.value = 'none'; // 「指定しない」用の値
+        noSelectionOption.textContent = '指定しない';
+        selectElement.appendChild(noSelectionOption);
+    }
+
     const uniqueValues = [...new Set(data.map(item => item[key]))];
+    console.log('ドロップダウンに設定される値 (' + key + '):', uniqueValues); // デバッグ用のメッセージ
 
     uniqueValues.forEach(value => {
         const option = document.createElement('option');
@@ -149,20 +160,29 @@ function setDropdownBehavior(data) {
         const selectedYear = this.value;
         console.log('年度が選択されました: ' + selectedYear);
 
-        if (selectedYear) {
+        if (selectedYear === 'none') {
+            // 「指定しない」が選択された場合、ランダムな年度を選択
+            const randomYear = selectRandomYear(data);
+            console.log('ランダム年度が選ばれました: ' + randomYear);
+            levelSelect.disabled = false; // レベル選択を有効化
+            const filteredData = data.filter(item => item.Year == randomYear); // ランダムに選択された年度に基づくフィルタリング
+            populateDropdown('level-select', filteredData, 'Level'); // レベルのドロップダウンを設定
+        } else if (selectedYear) {
+            // 通常の年度選択時の動作
             levelSelect.disabled = false; // 年度が選択されたらレベル選択を有効化
             const filteredData = data.filter(item => item.Year == selectedYear); // 選択された年度に基づくフィルタリング
             console.log('フィルタリング後のデータ（レベル）:', filteredData); // デバッグ用のメッセージ
             populateDropdown('level-select', filteredData, 'Level'); // レベルのドロップダウンを設定
         } else {
-            levelSelect.disabled = true; // 年度が未選択の場合は無効化
+            // 年度が未選択の場合
+            levelSelect.disabled = true; // レベルを無効化
             levelSelect.innerHTML = '<option value="">選択してください</option>';
             typeSelect.disabled = true; // タイプも無効化
             typeSelect.innerHTML = '<option value="">選択してください</option>';
         }
+
         typeSelect.disabled = true; // レベル選択後までタイプは無効化
         typeSelect.innerHTML = '<option value="">選択してください</option>';
-
         checkAllSelected(); // すべての選択状態をチェックしてボタン表示の制御
     });
 
@@ -170,11 +190,13 @@ function setDropdownBehavior(data) {
     levelSelect.addEventListener('change', function() {
         const selectedYear = yearSelect.value; // 選択された年度
         const selectedLevel = this.value;
-        console.log('レベルが選択されました: ' + selectedLevel);
 
         if (selectedLevel) {
             typeSelect.disabled = false; // レベルが選択されたらタイプ選択を有効化
-            const filteredData = data.filter(item => item.Year == selectedYear && item.Level == selectedLevel); // 選択された年度とレベルに基づくフィルタリング
+            const filteredData = selectedYear === 'none' 
+                ? data.filter(item => item.Level == selectedLevel) // 指定しない場合はレベルのみでフィルタリング
+                : data.filter(item => item.Year == selectedYear && item.Level == selectedLevel); // 選択された年度とレベルでフィルタリング
+
             console.log('フィルタリング後のデータ（タイプ）:', filteredData); // デバッグ用のメッセージ
             populateDropdown('type-select', filteredData, 'Type'); // タイプのドロップダウンを設定
         } else {
@@ -200,20 +222,11 @@ function setDropdownBehavior(data) {
     }
 }
 
-// ドロップダウンを設定する関数
-function populateDropdown(elementId, data, key) {
-    const selectElement = document.getElementById(elementId);
-    selectElement.innerHTML = '<option value="">選択してください</option>'; // 初期化
-
-    const uniqueValues = [...new Set(data.map(item => item[key]))];
-    console.log('ドロップダウンに設定される値 (' + key + '):', uniqueValues); // デバッグ用のメッセージ
-
-    uniqueValues.forEach(value => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value;
-        selectElement.appendChild(option);
-    });
+// ランダムな年度を選ぶ関数
+function selectRandomYear(data) {
+    const allYears = [...new Set(data.map(item => item.Year))]; // データからすべての年度を取得
+    const randomYear = allYears[Math.floor(Math.random() * allYears.length)]; // ランダムに1つ選択
+    return randomYear;
 }
 
 // ドロップダウンを表示する関数
@@ -248,48 +261,6 @@ document.getElementById('start-button').addEventListener('click', function() {
     displayQuestion();
 });
 
-// function displayQuestion() {
-//     const questionContent = document.getElementById('question-content');
-//     const startCountdownButton = document.getElementById('start-countdown-button');
-//     const nextQuestionButton = document.getElementById('next-question-button');
-
-//     // shuwaシートのデータをフィルタリングして取得（仮のデータを使用）
-//     const filteredData = filterDataBySelection(); // 選択肢に基づいてデータをフィルタリング
-
-//     if (filteredData.length === 0) {
-//         questionContent.innerText = '選択された条件に一致する問題がありません。';
-//         return;
-//     }
-
-//     // ランダムな問題を選択
-//     const randomQuestion = filteredData[Math.floor(Math.random() * filteredData.length)];
-
-//     // Typeが'Speech'の場合の処理
-//     if (randomQuestion.Type === 'Speech') {
-//         console.log('スピーチ判定に成功')
-//         if (randomQuestion.Theme) {  // Themeプロパティが存在するかを確認
-//             questionContent.innerText = randomQuestion.Theme; // Themeを表示
-//         } else {
-//             console.error('Themeプロパティが見つかりません'); // エラーログ
-//             return;
-//         }
-//         startCountdownButton.style.display = 'block'; // カウントダウン開始ボタンを表示
-
-//         // カウントダウン開始ボタンのクリックイベントを一度だけ追加
-//         startCountdownButton.onclick = function() {
-//             startCountdownButton.style.display = 'none'; // ボタンを非表示
-//             startCountdown(); // カウントダウンを開始
-//         };
-//     }
-
-//     // 次の問題へ進むボタンのクリックイベントを一度だけ追加
-//     nextQuestionButton.onclick = function() {
-//         nextQuestionButton.style.display = 'none'; // 次の問題へ進むボタンを非表示
-//         cancelCountdownButton.style.display = 'none'; // キャンセルボタンを非表示
-//         // 次の問題を表示するロジックをここに追加
-//         console.log('次の問題へ進む');
-//     };
-// }
 
 // 選択された条件に基づいてshuwaシートのデータをフィルタリングする関数
 function filterDataBySelection() {
@@ -297,12 +268,22 @@ function filterDataBySelection() {
     const levelSelect = document.getElementById('level-select').value;
     const typeSelect = document.getElementById('type-select').value;
 
-    // shuwaData変数からデータをフィルタリング
-    const filteredData = shuwaData.filter(item => 
-        item.Year == yearSelect && 
-        item.Level == levelSelect && 
-        item.Type == typeSelect
-    );
+    let filteredData = [];
+
+    if (yearSelect === 'none') {
+        // 年度を指定しない場合は、レベルとタイプのみでフィルタリング
+        filteredData = shuwaData.filter(item => 
+            item.Level == levelSelect && 
+            item.Type == typeSelect
+        );
+    } else {
+        // 通常のフィルタリング（年度、レベル、タイプでフィルタリング）
+        filteredData = shuwaData.filter(item => 
+            item.Year == yearSelect && 
+            item.Level == levelSelect && 
+            item.Type == typeSelect
+        );
+    }
 
     console.log('フィルタリングされたデータ:', filteredData); // デバッグ用のメッセージ
 
@@ -338,14 +319,13 @@ function displayQuestion() {
 
     // ランダムな問題を選択
     const randomQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
-    console.log(randomQuestion); // デバッグ用: 選ばれた問題を表示
+    console.log('問題はこれだ！', randomQuestion); // デバッグ用: 選ばれた問題を表示
 
     // 問題を出題済みリストに追加
     usedQuestions.push(randomQuestion);
 
-    
     // Typeが'Speech'の場合の処理
-    if (randomQuestion.Type === 'Speech') {
+    if (randomQuestion.Type === 'スピーチ') {
         if (randomQuestion.Theme) {  // Themeプロパティが存在するかを確認
             questionContent.innerText = randomQuestion.Theme; // Themeを表示
         } else {
@@ -359,7 +339,81 @@ function displayQuestion() {
             startCountdownButton.style.display = 'none'; // ボタンを非表示
             startCountdown(); // カウントダウンを開始
         };
-    } else if (randomQuestion.Type === 'four-choices') {
+    } else     if (randomQuestion.Type === '基本単語' || randomQuestion.Type === '短文') {
+        // displayBasicWordQuestion(randomQuestion); // 基本単語の問題表示
+    // デバッグ用にReference列の値をログ出力
+    console.log("YouTube動画ID:", randomQuestion.Reference);
+    // Reference列の値を使用してYouTube動画を表示
+    console.log('動画出力用関数実行')
+    embedYouTubeVideo(randomQuestion.Reference);
+    console.log('問題文の表示実行')
+    // Theme列を問題文として表示
+    const questionContent = document.getElementById('question-content');
+    questionContent.innerHTML = `<h3>${randomQuestion.Theme}</h3>`;
+
+    // Optionsをラジオボタンで表示
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'options-container';
+
+    // オプションを改行コードで分割
+    randomQuestion.Option.split('\n').forEach((option, index) => {
+        const optionWrapper = document.createElement('div');
+
+        const radioInput = document.createElement('input');
+        radioInput.type = 'radio';
+        radioInput.name = 'options';
+        radioInput.value = index;
+        radioInput.id = `option${index}`;
+
+        const radioLabel = document.createElement('label');
+        radioLabel.htmlFor = `option${index}`;
+        radioLabel.textContent = option;
+
+        optionWrapper.appendChild(radioInput);
+        optionWrapper.appendChild(radioLabel);
+        optionsContainer.appendChild(optionWrapper);
+    });
+
+    questionContent.appendChild(optionsContainer);
+
+    // 回答ボタンを作成
+    const answerButton = document.createElement('button');
+    answerButton.textContent = '回答する';
+    answerButton.className = 'answer-button';
+    questionContent.appendChild(answerButton);
+
+    // 解説表示エリアを作成
+    const explanationContainer = document.createElement('div');
+    explanationContainer.className = 'explanation-container';
+    questionContent.appendChild(explanationContainer);
+
+    // 回答ボタンクリックイベント
+    answerButton.onclick = function() {
+        const selectedOption = document.querySelector('input[name="options"]:checked');
+        if (!selectedOption) {
+            alert('選択肢を選んでください。');
+            return;
+        }
+        console.log(randomQuestion)
+        const selectedValue = parseInt(selectedOption.value);
+        const correctAnswer = parseInt(randomQuestion.Answer);
+
+        // 正否判定
+        if (selectedValue+1 === correctAnswer) {
+            explanationContainer.innerHTML = '<p style="color: green;">正解です！</p>';
+        } else {
+            explanationContainer.innerHTML = '<p style="color: red;">不正解です。</p>';
+        }
+
+        // 解説を表示
+        const explanation = document.createElement('p');
+        explanation.textContent = randomQuestion.Detail;
+        explanationContainer.appendChild(explanation);
+
+        // 「次の問題へ進む」ボタンを表示
+        nextQuestionButton.style.display = 'block';
+    }
+    } else if (randomQuestion.Type === '4択問題') {
         // 'four-choices' の場合の処理
         questionContent.innerHTML = ''; // 以前のコンテンツをクリア
     
@@ -430,7 +484,7 @@ function displayQuestion() {
             // 「次の問題へ進む」ボタンを表示
             nextQuestionButton.style.display = 'block';
         };
-    } else if (randomQuestion.Type === 'options') {
+    } else if (randomQuestion.Type === '穴埋め形式') {
         // 'options' の場合の処理
         questionContent.innerHTML = ''; // 以前のコンテンツをクリア
     
@@ -538,7 +592,13 @@ function startCountdown() {
 
 
     const ctx = canvas.getContext('2d');
-    const totalTime = 120; // 2分（120秒）
+    // 選択されたレベルを取得
+    const levelSelect = document.getElementById('level-select').value;
+
+    // レベルに応じたタイマー時間を設定
+    console.log(levelSelect)
+    const totalTime = (levelSelect === '5' || levelSelect === '4' || levelSelect === '3') ? 60 : 120; // 5, 4, 3の場合は60秒、それ以外は120秒
+    console.log('円グラフを設定した秒数で描写: ', totalTime)
     let currentTime = totalTime;
 
     function drawCountdown() {
@@ -575,6 +635,60 @@ function startCountdown() {
         clearInterval(countdownInterval); // カウントダウンを停止
         canvas.style.display = 'none'; // 円グラフを非表示
         cancelCountdownButton.style.display = 'none'; // キャンセルボタンを非表示
-        nextQuestionButton.style.display = 'block'; // 次の問題へ進むボタンを表示
+        nextQuestionButton.style.display = 'block'; // 次の問題へ進むボタンを表示js/script.js
     };
 }
+
+// YouTube動画を埋め込む関数
+function embedYouTubeVideo(videoId) {
+    console.log("embedYouTubeVideo 関数が呼び出されました。videoId:", videoId);
+
+    const questionContent = document.getElementById('question-content');
+    if (!questionContent) {
+        console.error("質問コンテナが見つかりません。動画を埋め込めませんでした。");
+        return;
+    }
+
+    console.log("questionContent:", questionContent);
+    console.log("questionContentのHTML:", questionContent.innerHTML);
+
+    const existingVideoContainer = document.getElementById('video-container');
+    if (existingVideoContainer) {
+        existingVideoContainer.remove();
+    }
+
+    const videoContainer = document.createElement('div');
+    videoContainer.id = 'video-container';
+
+    // const iframe = document.createElement('iframe');
+    // iframe.width = "560";
+    // iframe.height = "315";
+    // iframe.src = `https://www.youtube.com/embed/${videoId}`;
+    // iframe.title = "YouTube動画プレイヤー";
+    // iframe.frameBorder = "0";
+    // iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    // iframe.allowFullscreen = true;
+    // YouTubeの埋め込みURLを設定
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube.com/embed/${videoId}`;
+    iframe.title = "YouTube動画プレイヤー";
+    iframe.frameBorder = "0";
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    iframe.allowFullscreen = true;
+    iframe.style.borderRadius = '15px'; // iframeにも角丸を追加
+
+
+    videoContainer.appendChild(iframe);
+    console.log("iframe created and appended to videoContainer");
+
+    // 再描画のタイミングを確実にするためにrequestAnimationFrameを使う
+    requestAnimationFrame(() => {
+        questionContent.insertBefore(videoContainer, questionContent.firstChild);
+        console.log("動画コンテナが質問コンテナに追加されました");
+    });
+}
+
+
+
+
+
