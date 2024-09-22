@@ -49,6 +49,11 @@ function resetView() {
         countdownTimer.style.display = 'none';
         // console.log('countdown-timer hidden');
     }
+    // 残り問題数の表示を消去
+    const remainingQuestionsElement = document.getElementById('remaining-questions');
+    if (remainingQuestionsElement) {
+        remainingQuestionsElement.textContent = ''; // 残り問題数を消去
+    }
 }
 
 // 特定のクラスを持つ要素をすべて非表示にするヘルパー関数
