@@ -307,6 +307,17 @@ function initializeQuestionCounters() {
     if (remainingQuestionsElement) {
         remainingQuestionsElement.textContent = '';  // 表示もクリア
     }
+    const filteredData = filterDataBySelection();
+
+    // ストーリーナンバリングがあるかどうかを確認
+    if (filteredData.length > 0 && filteredData[0]["ストーリーナンバリング"]) {
+        // ストーリーの場合はストーリーナンバリング単位で残り数を設定
+        totalQuestions = getRemainingStoryCount(filteredData);
+    } else {
+        totalQuestions = filteredData.length; // ストーリーナンバリングがない場合、全体の問題数
+    }
+
+    remainingQuestionsCount = totalQuestions; // 残り問題数を設定
 }
 
 
@@ -328,28 +339,54 @@ function displayQuestion() {
     // 出題済みの問題を除外した未出題の問題を取得
     const remainingQuestions = filteredData.filter(q => !usedQuestions.includes(q));
 
+    // ランダムな問題を選択
+    const randomQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+
     if (remainingQuestions.length === 0) {
         questionContent.innerText = 'すべての問題が出題されました。お疲れ様でした！';
         nextQuestionButton.style.display = 'none'; // 次の問題へ進むボタンを非表示
         return;
     }
 
-    const totalQuestions = filteredData.length;
-    const answeredQuestions = usedQuestions.length;
-    const remainingQuestionsCount = totalQuestions - answeredQuestions;
+    if (randomQuestion.Type === 'ストーリー') {
+        // ストーリーナンバリングを基に残りのストーリーセット数を計算
+        const remainingStorySets = getRemainingStoryCount(filteredData);
+        const remainingQuestionsElement = document.getElementById('remaining-questions');
+        if (remainingQuestionsElement) {
+            remainingQuestionsElement.innerText = `残りのストーリー問題数: ${remainingStorySets}`;
+        }
+        } else {
+            // 通常問題の処理
 
-    // 残りの問題数を計算して表示
-    console.log('問題の総数', totalQuestions);
-    console.log('出題済みのデータ', answeredQuestions);
-    console.log('残りの問題数', remainingQuestionsCount);
+            const totalQuestions = filteredData.length;
+            const answeredQuestions = usedQuestions.length;
+            const remainingQuestionsCount = totalQuestions - answeredQuestions;
+            console.log(filteredData)
+            console.log('問題の総数', totalQuestions);
+            console.log('出題済みのデータ', answeredQuestions);
+            console.log('残りの問題数', remainingQuestionsCount);
+            // 残りの問題数を計算して表示
+            const remainingQuestionsElement = document.getElementById('remaining-questions');
+            if (remainingQuestionsElement) {
+                remainingQuestionsElement.innerText = `残りの問題: ${remainingQuestionsCount}問`;
+            }
+        }
 
-    const remainingQuestionsElement = document.getElementById('remaining-questions');
-    if (remainingQuestionsElement) {
-        remainingQuestionsElement.innerText = `残りの問題: ${remainingQuestionsCount}問`;
-    }
+    // const totalQuestions = filteredData.length;
+    // const answeredQuestions = usedQuestions.length;
+    // const remainingQuestionsCount = totalQuestions - answeredQuestions;
 
-    // ランダムな問題を選択
-    const randomQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+    // // 残りの問題数を計算して表示
+    // console.log(filteredData)
+    // console.log('問題の総数', totalQuestions);
+    // console.log('出題済みのデータ', answeredQuestions);
+    // console.log('残りの問題数', remainingQuestionsCount);
+
+    // const remainingQuestionsElement = document.getElementById('remaining-questions');
+    // if (remainingQuestionsElement) {
+    //     remainingQuestionsElement.innerText = `残りの問題: ${remainingQuestionsCount}問`;
+    // }
+
     // console.log('問題はこれだ！', randomQuestion); // デバッグ用: 選ばれた問題を表示
 
     // 問題を出題済みリストに追加
@@ -841,4 +878,13 @@ function displayStoryVideoAndExplanation(storyNumber) {
 }
 
 
+// ストーリーの問題数を取得
+function getRemainingStoryCount(filteredData) {
+    // ストーリーナンバリングでグループ化し、未出題のストーリーセットを数える
+    const storyNumbers = new Set(filteredData.map(item => item["ストーリーナンバリング"]));
+    const remainingStoryNumbers = new Set([...storyNumbers].filter(storyNum => {
+        return !usedQuestions.some(question => question["ストーリーナンバリング"] === storyNum);
+    }));
 
+    return remainingStoryNumbers.size; // 残りのストーリーセット数
+}
