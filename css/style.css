@@ -210,6 +210,17 @@ footer p {
     border-radius: 15px; /* iframeにも角丸を適用 */
 }
 
+#remaining-questions {
+    text-align: center;  /* 中央揃え */
+    font-size: 1.5em;    /* フォントサイズを大きく */
+    font-weight: bold;   /* フォントを太く */
+    margin: 20px 0;      /* 上下に余白を追加 */
+    color: #333;         /* テキストの色を変更 */
+    background-color: #f4f4f4;  /* 背景色を追加 */
+    padding: 10px;       /* 内側の余白を追加 */
+    border-radius: 10px;  /* 角を丸くする */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);  /* 影を追加して立体感を出す */
+}
 
 
 
