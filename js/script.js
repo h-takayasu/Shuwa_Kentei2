@@ -152,13 +152,17 @@
     );
   }
 
+  function storyGroupKey(d) {
+    return d['ストーリーナンバリング'] || d.Reference;
+  }
+
   function getRemainingCount() {
     const filtered = filterQuestions();
     const used = state.usedQuestions;
     if (state.selectedType === 'ストーリー') {
-      const allNums = new Set(filtered.map(d => d['ストーリーナンバリング']));
-      const usedNums = new Set(used.map(d => d['ストーリーナンバリング']));
-      return [...allNums].filter(n => !usedNums.has(n)).length;
+      const allKeys = new Set(filtered.map(storyGroupKey));
+      const usedKeys = new Set(used.map(storyGroupKey));
+      return [...allKeys].filter(k => !usedKeys.has(k)).length;
     }
     return filtered.filter(q => !used.includes(q)).length;
   }
@@ -166,7 +170,7 @@
   function getTotalCount() {
     const filtered = filterQuestions();
     if (state.selectedType === 'ストーリー') {
-      return new Set(filtered.map(d => d['ストーリーナンバリング'])).size;
+      return new Set(filtered.map(storyGroupKey)).size;
     }
     return filtered.length;
   }
@@ -180,9 +184,9 @@
     const q = remaining[Math.floor(Math.random() * remaining.length)];
 
     if (q.Type === 'ストーリー') {
-      const stNum = q['ストーリーナンバリング'];
+      const gk = storyGroupKey(q);
       const storyQs = filtered
-        .filter(d => d['ストーリーナンバリング'] === stNum)
+        .filter(d => d.Type === 'ストーリー' && storyGroupKey(d) === gk)
         .sort((a, b) => a['#'] - b['#'])
         .slice(0, 3);
       Object.assign(state, {
@@ -322,9 +326,11 @@
       el.style.display = id === activeId ? 'flex' : 'none';
     });
 
-    // Footer: hide TOP link on top screen
+    // Footer: hide TOP link on top screen, show back-to-select only on question screen
     const footerLink = $('footer-top-link');
     if (footerLink) footerLink.style.display = state.screen === 'top' ? 'none' : 'inline-block';
+    const footerBack = $('footer-back-select');
+    if (footerBack) footerBack.style.display = state.screen === 'question' ? 'inline-block' : 'none';
 
     if (state.screen === 'top') renderTop();
     else if (state.screen === 'select') renderSelect();
@@ -355,7 +361,6 @@
     $('select-title').textContent = (state.mode === 'shuwa' ? '実技' : '筆記') + 'コース';
     $('select-title').style.color = t.accentDark;
     $('select-subtitle').style.color = t.accentMid;
-    $('btn-back').style.color = t.accentMid;
 
     // Step circles
     $('step-1').style.background = t.accent;
@@ -948,8 +953,6 @@
     };
 
     // Select page
-    $('btn-back').onclick = goTop;
-
     $('year-select').onchange = (e) => {
       const val = e.target.value;
       let randomYear = null;
@@ -998,8 +1001,8 @@
 
     $('btn-home').onclick = goTop;
 
-    // Question page back button
-    $('btn-back-question').onclick = () => {
+    // Footer back-to-select button
+    $('footer-back-select').onclick = () => {
       if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
       if (state.answered > 0) saveStats(state.answered, state.correct);
       setState({
