@@ -114,8 +114,18 @@
   function populateYears() {
     const data = getData();
     let years = [...new Set(data.map(d => d.Year))].filter(v => v != null && `${v}`.trim() !== '');
-    years.sort((a, b) => Number(b) - Number(a));
+    years.sort(yearCompare);
     return years;
+  }
+
+  // 「模擬A」など非数値ラベルを先頭に置き、数値年度は降順で続ける
+  function yearCompare(a, b) {
+    const na = Number(a), nb = Number(b);
+    const aNum = !isNaN(na), bNum = !isNaN(nb);
+    if (aNum && bNum) return nb - na;
+    if (aNum) return 1;
+    if (bNum) return -1;
+    return `${a}`.localeCompare(`${b}`);
   }
 
   function populateLevels(year) {
@@ -137,7 +147,8 @@
 
   function selectRandomYear() {
     const data = getData();
-    const allYears = [...new Set(data.map(d => d.Year))].filter(v => v != null && `${v}` !== 'unknown');
+    // 「指定しない」は過去問ランダムの意味なので、模擬など非数値年度は除外する
+    const allYears = [...new Set(data.map(d => d.Year))].filter(v => v != null && `${v}` !== 'unknown' && !isNaN(Number(v)));
     return allYears[Math.floor(Math.random() * allYears.length)];
   }
 
@@ -932,7 +943,7 @@
       const data = state.shuwaData;
       if (!data || data.length === 0) { loadExcel(); return; }
       let years = [...new Set(data.map(d => d.Year))].filter(v => v != null && `${v}`.trim() !== '' && `${v}` !== 'unknown');
-      years.sort((a, b) => Number(b) - Number(a));
+      years.sort(yearCompare);
       setState({
         mode: 'shuwa', screen: 'select',
         yearOpts: years, levelOpts: [], typeOpts: [],
@@ -944,7 +955,7 @@
       const data = state.writingData;
       if (!data || data.length === 0) { loadExcel(); return; }
       let years = [...new Set(data.map(d => d.Year))].filter(v => v != null && `${v}`.trim() !== '' && `${v}` !== 'unknown');
-      years.sort((a, b) => Number(b) - Number(a));
+      years.sort(yearCompare);
       setState({
         mode: 'writing', screen: 'select',
         yearOpts: years, levelOpts: [], typeOpts: [],
